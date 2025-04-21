@@ -1,11 +1,10 @@
-name: Build, Push, Ssh, Pull, Down, Up
+name: Build and Deploy Docker Image
 
 on: [push]
 
-
 jobs:
   build-and-push:
-    name: Build
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout files
@@ -24,7 +23,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -32,17 +31,18 @@ jobs:
           push: true
           tags: lamdb/ci-cd:staging2
 
-
-  pull-and-up:
-    name: Pull new image and re run with the new version
+  deploy:
+    name: Deploy Updated Image
     runs-on: ubuntu-latest
     needs: build-and-push
     steps:
-      - uses: appleboy/ssh-action@master
+      - name: SSH into server and deploy
+        uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PRIVATE_KEY }}
           script: |
+            set -e
             cd ${{ secrets.PATH }}
             docker-compose pull && docker-compose down && docker-compose up -d
